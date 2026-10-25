@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "mehmetclient",
+  "version": "${version}",
+  "name": "Mehmet Client",
+  "description": "Minecraft 1.21.11 client-side ESP and local loaded-chunk analysis utilities.",
+  "authors": ["Mehmet Client Team"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.mehmetclient.client.MehmetClientClient"]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
