@@ -39,7 +39,7 @@ public final class MehmetClientScreen extends Screen {
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL);
         graphics.fill(panelX, panelY, panelX + panelW, panelY + 3, PURPLE);
         graphics.drawString(font, Component.literal("MEHMET CLIENT"), panelX + 18, panelY + 12, TEXT);
-        graphics.drawString(font, Component.literal("Minecraft 1.21.11 | Fabric | v1.2.1"), panelX + 18, panelY + 27, MUTED);
+        graphics.drawString(font, Component.literal("Minecraft 1.21.11 | Fabric | v1.3.0"), panelX + 18, panelY + 27, MUTED);
         graphics.drawString(font, Component.literal("RIGHT SHIFT / ESC"), panelX + panelW - 125, panelY + 14, MUTED);
 
         int tabY = panelY + 49;
@@ -79,7 +79,7 @@ public final class MehmetClientScreen extends Screen {
         int footerY = panelY + panelH - 20;
         graphics.fill(panelX + 16, footerY - 7, panelX + panelW - 16, footerY - 6, 0xFF353047);
         graphics.drawString(font, Component.literal("Enabled: " + ClientModules.enabledCount()), panelX + 18, footerY, MUTED);
-        graphics.drawString(font, Component.literal("SOON = not implemented"), panelX + panelW - 164, footerY, MUTED);
+        graphics.drawString(font, Component.literal("Right-click Block ESP to select blocks"), panelX + panelW - 224, footerY, MUTED);
         super.render(graphics, mouseX, mouseY, delta);
     }
 
@@ -87,6 +87,22 @@ public final class MehmetClientScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
         double mouseY = event.y();
+        if (event.button() == 1) {
+            int listX = panelX + 16;
+            int rowW = panelW - 32;
+            int rowH = 20;
+            if (mouseX >= listX && mouseX <= listX + rowW && mouseY >= listY && mouseY < listBottom) {
+                int index = (int) ((mouseY - listY) / rowH);
+                List<String> modules = ClientModules.modules(selectedCategory);
+                int visible = Math.max(1, (listBottom - listY) / rowH);
+                if (selectedCategory.equals("Render") && index >= 0 && index < Math.min(visible, modules.size())
+                        && modules.get(index).equals("Block ESP")) {
+                    minecraft.setScreen(new BlockEspSettingsScreen(this));
+                    return true;
+                }
+            }
+            return super.mouseClicked(event, doubleClick);
+        }
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
 
         int tabY = panelY + 49;

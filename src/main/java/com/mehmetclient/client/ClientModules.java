@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedHashSet;
 
 /** Registry of implemented client-side modules. Unsupported modules stay visibly unavailable. */
 public final class ClientModules {
@@ -31,6 +32,17 @@ public final class ClientModules {
             "Seed Chunk Finder", "Chunk Finder"
     );
 
+    // Block ESP target IDs use vanilla registry paths (without the minecraft: namespace).
+    private static final Set<String> BLOCK_ESP_TARGETS = new LinkedHashSet<>(List.of(
+            "diamond_ore", "deepslate_diamond_ore", "ancient_debris", "chest", "trapped_chest",
+            "barrel", "spawner", "trial_spawner", "vault", "ender_chest", "shulker_box",
+            "obsidian", "crying_obsidian", "beacon", "diamond_block", "emerald_block",
+            "gold_block", "iron_block", "netherite_block", "emerald_ore", "deepslate_emerald_ore",
+            "gold_ore", "deepslate_gold_ore", "iron_ore", "deepslate_iron_ore", "lapis_ore",
+            "deepslate_lapis_ore", "redstone_ore", "deepslate_redstone_ore", "copper_ore",
+            "deepslate_copper_ore", "nether_gold_ore", "ancient_debris"
+    ));
+
     static {
         MODULES.put("General", List.of(
                 "Anti Trap", "Auto Sell", "Auto Spawner Sell", "Chunk Finder", "Fake Pay",
@@ -45,6 +57,26 @@ public final class ClientModules {
 
         MODULES.values().forEach(list -> list.forEach(name -> ENABLED.put(name, false)));
         ENABLED.put("HUD", true);
+    }
+
+    public static Set<String> blockEspTargets() {
+        return Set.copyOf(BLOCK_ESP_TARGETS);
+    }
+
+    public static boolean isBlockEspTarget(String blockPath) {
+        return BLOCK_ESP_TARGETS.contains(blockPath);
+    }
+
+    public static void toggleBlockEspTarget(String blockPath) {
+        if (!BLOCK_ESP_TARGETS.remove(blockPath)) BLOCK_ESP_TARGETS.add(blockPath);
+    }
+
+    public static boolean hasBlockEspTarget(String blockPath) {
+        return BLOCK_ESP_TARGETS.contains(blockPath);
+    }
+
+    public static void setEnabled(String module, boolean enabled) {
+        if (hasBehavior(module) && ENABLED.containsKey(module)) ENABLED.put(module, enabled);
     }
 
     public static List<String> modules(String category) {

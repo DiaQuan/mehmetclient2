@@ -1,12 +1,9 @@
 package com.mehmetclient.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -30,6 +28,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Client-side scanner for the currently loaded area only. It never requests chunks,
@@ -54,11 +53,14 @@ public final class WorldScanner {
     private static int ticksUntilScan;
     private static final Set<BlockPos> notifiedBlocks = new HashSet<>();
     private static final int HORIZONTAL_RADIUS = 16;
-    private static final int VERTICAL_RADIUS = 7;
+    private static final int RTP_WAIT_TICKS = 160;
+    private static boolean rtpActive;
+    private static int rtpWaitTicks;
+    private static boolean selectedBlockFound;
     private static final int MAX_MARKERS = 1400;
 
     public static void registerRenderEvents() {
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(WorldScanner::renderWorld);
+        WorldRenderEvents.BEFORE_TRANSLUCENT.register(WorldScanner::renderWorld);
     }
 
     public static List<Marker> visibleMarkers() {
@@ -73,16 +75,54 @@ public final class WorldScanner {
             markers = List.of();
             notifiedBlocks.clear();
             ticksUntilScan = 0;
+            rtpActive = false;
+            rtpWaitTicks = 0;
+            selectedBlockFound = false;
             return;
         }
+        boolean rtpEnabled = ClientModules.isEnabled("RTP Base Finder");
+        if (rtpEnabled && !rtpActive) {
+            rtpActive = true;
+            rtpWaitTicks = RTP_WAIT_TICKS;
+            markers = List.of();
+            sendRtpCommand(client);
+            client.player.displayClientMessage(Component.literal("§5[Mehmet] §dRTP Base Finder: teleport requested; scanning loaded area..."), false);
+            return;
+        }
+        if (!rtpEnabled) {
+            rtpActive = false;
+            rtpWaitTicks = 0;
+        } else if (rtpWaitTicks > 0) {
+            rtpWaitTicks--;
+            if (rtpWaitTicks == 0) {
+                scanLoadedArea(client);
+                if (selectedBlockFound) {
+                    ClientModules.setEnabled("RTP Base Finder", false);
+                    rtpActive = false;
+                    client.player.displayClientMessage(Component.literal("§5[Mehmet] §aTESPIT EDILDI! Block ESP target found; automatic RTP stopped."), false);
+                    return;
+                }
+                sendRtpCommand(client);
+                rtpWaitTicks = RTP_WAIT_TICKS;
+                client.player.displayClientMessage(Component.literal("§5[Mehmet] §7No selected target in loaded area; trying RTP again..."), true);
+            }
+            return;
+        }
+
         if (!ClientModules.anyScanningEnabled()) {
             markers = List.of();
             notifiedBlocks.clear();
             return;
         }
         if (--ticksUntilScan > 0) return;
-        ticksUntilScan = 20;
+        ticksUntilScan = 40;
         scanLoadedArea(client);
+    }
+
+    private static void sendRtpCommand(Minecraft client) {
+        if (client.player == null || client.getConnection() == null) return;
+        // Server-specific command; only works where this command is supported.
+        client.getConnection().sendCommand("rtpanadünya");
     }
 
     private static void scanLoadedArea(Minecraft client) {
@@ -95,13 +135,13 @@ public final class WorldScanner {
         Set<String> duplicate = new LinkedHashSet<>();
         Set<BlockPos> oresSeenThisScan = new HashSet<>();
 
+        selectedBlockFound = false;
         for (int dx = -HORIZONTAL_RADIUS; dx <= HORIZONTAL_RADIUS; dx++) {
             for (int dz = -HORIZONTAL_RADIUS; dz <= HORIZONTAL_RADIUS; dz++) {
-                for (int dy = -VERTICAL_RADIUS; dy <= VERTICAL_RADIUS; dy++) {
-                    int x = origin.getX() + dx;
-                    int y = centerY + dy;
-                    int z = origin.getZ() + dz;
-                    if (y < level.getMinY() || y >= level.getMaxY()) continue;
+                int x = origin.getX() + dx;
+                int z = origin.getZ() + dz;
+                // Search the entire vertical range of already-loaded chunks, not just nearby Y levels.
+                for (int y = level.getMinY(); y < level.getMaxY(); y++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (!level.hasChunkAt(pos)) continue;
                     BlockState state = level.getBlockState(pos);
@@ -127,9 +167,6 @@ public final class WorldScanner {
 
                     if (ore) {
                         oresSeenThisScan.add(pos.immutable());
-                        if (ClientModules.isEnabled("Block ESP")) {
-                            add(next, duplicate, "Block ESP", pos, shortName(path), 0xFF50E780, false);
-                        }
                         if (ClientModules.isEnabled("Ore Sim")) {
                             add(next, duplicate, "Ore Sim", pos, "ORE: " + shortName(path), 0xFF50C8FF, false);
                         }
@@ -137,8 +174,11 @@ public final class WorldScanner {
                             add(next, duplicate, "Netherite Finder", pos, "ANCIENT DEBRIS", 0xFFFF8A50, false);
                         }
                     }
-                    if (ClientModules.isEnabled("Block ESP") && !ore && (container || valuable)) {
-                        add(next, duplicate, "Block ESP", pos, shortName(path), 0xFF50E780, false);
+                    if (ClientModules.isBlockEspTarget(path)) {
+                        if (ClientModules.isEnabled("RTP Base Finder")) selectedBlockFound = true;
+                        if (ClientModules.isEnabled("Block ESP")) {
+                            add(next, duplicate, "Block ESP", pos, shortName(path), 0xFF50E780, false);
+                        }
                     }
                     if (ClientModules.isEnabled("Storage ESP") && container) {
                         add(next, duplicate, "Storage ESP", pos, shortName(path), 0xFFFFD65A, false);
@@ -297,7 +337,8 @@ public final class WorldScanner {
 
     private static void renderWorld(WorldRenderContext context) {
         Minecraft client = Minecraft.getInstance();
-        if (client.level == null || client.player == null || context.consumers() == null) return;
+        if (client.level == null || client.player == null) return;
+        List<ThroughWallEspRenderer.Box> boxes = new ArrayList<>();
 
         boolean markerRendering = ClientModules.isEnabled("Block ESP") || ClientModules.isEnabled("Ore Sim")
                 || ClientModules.isEnabled("Netherite Finder") || ClientModules.isEnabled("Storage ESP")
@@ -306,46 +347,36 @@ public final class WorldScanner {
                 || ClientModules.isEnabled("Tunnel Base Finder") || ClientModules.isEnabled("Prime Chunk Finder")
                 || ClientModules.isEnabled("RTP Base Finder") || ClientModules.isEnabled("Sus Chunk Finder")
                 || ClientModules.isEnabled("Seed Chunk Finder") || ClientModules.isEnabled("Chunk Finder");
-        boolean entityRendering = ClientModules.isEnabled("Player ESP") || ClientModules.isEnabled("Mob ESP")
-                || ClientModules.isEnabled("RealHitBox");
-        if (!markerRendering && !entityRendering) return;
-
-        var camera = client.gameRenderer.getMainCamera().position();
-        PoseStack pose = context.matrices();
-        pose.pushPose();
-        pose.translate(-camera.x, -camera.y, -camera.z);
-        VertexConsumer lines = context.consumers().getBuffer(RenderTypes.linesTranslucent());
-
         if (markerRendering) {
             for (Marker marker : markers) {
                 if (!ClientModules.isEnabled(marker.module())) continue;
-                if (marker.pos().getCenter().distanceToSqr(client.player.position()) > 40.0 * 40.0) continue;
-                BlockPos pos = marker.pos();
-                BlockState state = client.level.getBlockState(pos);
-                VoxelShape shape = state.getShape(client.level, pos);
-                if (shape.isEmpty()) shape = Shapes.block();
-                ShapeRenderer.renderShape(pose, lines, shape, pos.getX(), pos.getY(), pos.getZ(), marker.color(), 1.6f);
+                if (marker.pos().getCenter().distanceToSqr(client.player.position()) > 64.0 * 64.0) continue;
+                boxes.add(ThroughWallEspRenderer.block(marker.pos().getX(), marker.pos().getY(), marker.pos().getZ(), marker.color()));
             }
         }
 
+        boolean entityRendering = ClientModules.isEnabled("Player ESP") || ClientModules.isEnabled("Mob ESP")
+                || ClientModules.isEnabled("RealHitBox");
         if (entityRendering) {
             for (Entity entity : client.level.entitiesForRendering()) {
                 if (entity == client.player || !entity.isAlive()) continue;
-                if (entity.distanceToSqr(client.player) > 48.0 * 48.0) continue;
+                if (entity.distanceToSqr(client.player) > 64.0 * 64.0) continue;
                 boolean isPlayer = entity instanceof Player;
                 boolean isMob = entity instanceof Mob && !isPlayer;
                 boolean usePlayer = ClientModules.isEnabled("Player ESP") && isPlayer;
                 boolean useMob = ClientModules.isEnabled("Mob ESP") && isMob;
                 boolean useHitbox = ClientModules.isEnabled("RealHitBox");
                 if (!usePlayer && !useMob && !useHitbox) continue;
-
                 int color = isPlayer ? 0xFFFF5DA8 : (isMob ? 0xFFFF9A4D : 0xFF8CC8FF);
-                AABB worldBox = entity.getBoundingBox().inflate(0.04);
-                AABB localBox = worldBox.move(-entity.getX(), -entity.getY(), -entity.getZ());
-                VoxelShape boxShape = Shapes.create(localBox);
-                ShapeRenderer.renderShape(pose, lines, boxShape, entity.getX(), entity.getY(), entity.getZ(), color, 1.5f);
+                boxes.add(ThroughWallEspRenderer.entity(entity.getBoundingBox().inflate(0.04), color));
             }
         }
+        if (boxes.isEmpty()) return;
+        PoseStack pose = context.matrices();
+        Vec3 camera = context.worldState().cameraRenderState.pos;
+        pose.pushPose();
+        pose.translate(-camera.x, -camera.y, -camera.z);
+        ThroughWallEspRenderer.draw(client, pose, boxes);
         pose.popPose();
     }
 }
