@@ -61,7 +61,7 @@ public final class MehmetClientClient implements ClientModInitializer {
         if (ClientModules.isEnabled("HUD")) {
             graphics.fill(x - 4, y - 4, x + width, y + baseHeight, 0xB8101020);
             graphics.fill(x - 4, y - 4, x + width, y - 2, 0xFF9B5CFF);
-            graphics.drawString(client.font, Component.literal("MEHMET CLIENT v1.3.0"), x, y, 0xFFD9B8FF);
+            graphics.drawString(client.font, Component.literal("MEHMET CLIENT v1.3.1"), x, y, 0xFFD9B8FF);
             graphics.drawString(client.font, Component.literal("XYZ: " + (int) client.player.getX() + " / "
                     + (int) client.player.getY() + " / " + (int) client.player.getZ()), x, y + 13, 0xFFFFFFFF);
             graphics.drawString(client.font, Component.literal("Active modules: " + ClientModules.enabledCount()), x, y + 26, 0xFFB8B8C8);

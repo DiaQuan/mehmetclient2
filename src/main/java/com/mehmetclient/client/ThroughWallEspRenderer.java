@@ -95,7 +95,13 @@ public final class ThroughWallEspRenderer {
         float g=((b.color() >>> 8) & 255) / 255f;
         float bl=(b.color() & 255) / 255f;
         for (int[] edge : edges) {
-            for (int i : edge) out.addVertex(matrix, (float)p[i][0], (float)p[i][1], (float)p[i][2]).setColor(r,g,bl,a);
+            for (int i : edge) {
+                // LINES_SNIPPET requires POSITION, COLOR, NORMAL and LINE_WIDTH attributes.
+                out.addVertex(matrix, (float) p[i][0], (float) p[i][1], (float) p[i][2])
+                        .setColor(r, g, bl, a)
+                        .setNormal(0.0f, 1.0f, 0.0f)
+                        .setLineWidth(2.0f);
+            }
         }
     }
 

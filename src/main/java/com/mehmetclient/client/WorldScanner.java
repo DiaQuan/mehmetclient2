@@ -52,7 +52,7 @@ public final class WorldScanner {
     private static volatile List<Marker> markers = List.of();
     private static int ticksUntilScan;
     private static final Set<BlockPos> notifiedBlocks = new HashSet<>();
-    private static final int HORIZONTAL_RADIUS = 16;
+    private static final int CHUNK_RADIUS = 4; // Scan a 9x9 chunk square around the player, if loaded.
     private static final int RTP_WAIT_TICKS = 160;
     private static boolean rtpActive;
     private static int rtpWaitTicks;
@@ -115,7 +115,7 @@ public final class WorldScanner {
             return;
         }
         if (--ticksUntilScan > 0) return;
-        ticksUntilScan = 40;
+        ticksUntilScan = 160; // Heavy full-height scan: throttle to once every 8 seconds.
         scanLoadedArea(client);
     }
 
@@ -136,15 +136,22 @@ public final class WorldScanner {
         Set<BlockPos> oresSeenThisScan = new HashSet<>();
 
         selectedBlockFound = false;
-        for (int dx = -HORIZONTAL_RADIUS; dx <= HORIZONTAL_RADIUS; dx++) {
-            for (int dz = -HORIZONTAL_RADIUS; dz <= HORIZONTAL_RADIUS; dz++) {
-                int x = origin.getX() + dx;
-                int z = origin.getZ() + dz;
-                // Search the entire vertical range of already-loaded chunks, not just nearby Y levels.
-                for (int y = level.getMinY(); y < level.getMaxY(); y++) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    if (!level.hasChunkAt(pos)) continue;
-                    BlockState state = level.getBlockState(pos);
+        int centerChunkX = origin.getX() >> 4;
+        int centerChunkZ = origin.getZ() >> 4;
+        int minY = level.getMinY();
+        int maxY = level.getMaxY();
+        for (int chunkX = centerChunkX - CHUNK_RADIUS; chunkX <= centerChunkX + CHUNK_RADIUS; chunkX++) {
+            for (int chunkZ = centerChunkZ - CHUNK_RADIUS; chunkZ <= centerChunkZ + CHUNK_RADIUS; chunkZ++) {
+                // Check once per chunk; never request or generate an unloaded chunk.
+                if (!level.hasChunkAt(new BlockPos(chunkX << 4, minY, chunkZ << 4))) continue;
+                for (int localX = 0; localX < 16; localX++) {
+                    int x = (chunkX << 4) + localX;
+                    for (int localZ = 0; localZ < 16; localZ++) {
+                        int z = (chunkZ << 4) + localZ;
+                        // Scan from the dimension's bottom build limit to its exclusive top limit.
+                        for (int y = minY; y < maxY; y++) {
+                            BlockPos pos = new BlockPos(x, y, z);
+                            BlockState state = level.getBlockState(pos);
 
                     if (state.isAir()) {
                         if (ClientModules.isEnabled("Hole ESP") && isHole(level, pos, centerY)) {
@@ -209,6 +216,8 @@ public final class WorldScanner {
                         if (stats.anchor == null) stats.anchor = pos.immutable();
                     }
                     if (ore) stats.ores++;
+                        }
+                    }
                 }
             }
         }

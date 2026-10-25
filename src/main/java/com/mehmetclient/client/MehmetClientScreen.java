@@ -39,7 +39,7 @@ public final class MehmetClientScreen extends Screen {
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL);
         graphics.fill(panelX, panelY, panelX + panelW, panelY + 3, PURPLE);
         graphics.drawString(font, Component.literal("MEHMET CLIENT"), panelX + 18, panelY + 12, TEXT);
-        graphics.drawString(font, Component.literal("Minecraft 1.21.11 | Fabric | v1.3.0"), panelX + 18, panelY + 27, MUTED);
+        graphics.drawString(font, Component.literal("Minecraft 1.21.11 | Fabric | v1.3.1"), panelX + 18, panelY + 27, MUTED);
         graphics.drawString(font, Component.literal("RIGHT SHIFT / ESC"), panelX + panelW - 125, panelY + 14, MUTED);
 
         int tabY = panelY + 49;
@@ -70,6 +70,9 @@ public final class MehmetClientScreen extends Screen {
             boolean enabled = ClientModules.isEnabled(module);
             graphics.fill(listX, y, listX + rowW, y + rowH - 1, hover ? ROW_HOVER : ROW);
             graphics.drawString(font, Component.literal(module), listX + 9, y + 5, implemented ? TEXT : MUTED);
+            if (selectedCategory.equals("Render") && module.equals("Block ESP")) {
+                graphics.drawString(font, Component.literal("[ SELECT BLOCKS ]"), listX + rowW - 122, y + 5, PURPLE);
+            }
             String status = !implemented ? "SOON" : (enabled ? "ON" : "OFF");
             int statusColor = !implemented ? 0xFF6F6A7D : (enabled ? 0xFFB78BFF : 0xFF777386);
             graphics.drawString(font, Component.literal(status), listX + rowW - 38, y + 5, statusColor);
@@ -124,7 +127,13 @@ public final class MehmetClientScreen extends Screen {
             List<String> modules = ClientModules.modules(selectedCategory);
             int visible = Math.max(1, (listBottom - listY) / rowH);
             if (index >= 0 && index < Math.min(visible, modules.size())) {
-                ClientModules.toggle(modules.get(index));
+                String module = modules.get(index);
+                if (selectedCategory.equals("Render") && module.equals("Block ESP")
+                        && mouseX >= listX + rowW - 132) {
+                    minecraft.setScreen(new BlockEspSettingsScreen(this));
+                } else {
+                    ClientModules.toggle(module);
+                }
             }
             return true;
         }

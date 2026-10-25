@@ -19,7 +19,7 @@ public final class BlockEspSettingsScreen extends Screen {
             new Target("trial_spawner", "Trial Spawner"), new Target("vault", "Vault"),
             new Target("shulker_box", "Shulker Box"), new Target("obsidian", "Obsidian"),
             new Target("crying_obsidian", "Crying Obsidian"), new Target("beacon", "Beacon"),
-            new Target("diamond_block", "Diamond Block"), new Target("emerald_block", "Emerald Block"),
+            new Target("diamond_block", "Diamond Block"), new Target("netherite_block", "Netherite Block"), new Target("emerald_block", "Emerald Block"),
             new Target("gold_block", "Gold Block"), new Target("iron_block", "Iron Block"),
             new Target("emerald_ore", "Emerald Ore"), new Target("deepslate_emerald_ore", "Deepslate Emerald Ore"),
             new Target("gold_ore", "Gold Ore"), new Target("deepslate_gold_ore", "Deepslate Gold Ore"),
@@ -57,7 +57,7 @@ public final class BlockEspSettingsScreen extends Screen {
                 b.setMessage(label(target));
             }).bounds(x, y, buttonW, 18).build());
         }
-        addRenderableWidget(Button.builder(Component.literal("Back"), b -> minecraft.setScreen(parent))
+        addRenderableWidget(Button.builder(Component.literal("Back / Geri"), b -> minecraft.setScreen(parent))
                 .bounds(width / 2 - 70, height - 32, 140, 22).build());
     }
 
@@ -70,7 +70,7 @@ public final class BlockEspSettingsScreen extends Screen {
         graphics.fill(0, 0, width, height, 0xEE080611);
         graphics.fill(0, 0, width, 3, PURPLE);
         graphics.drawCenteredString(font, "MEHMET CLIENT - BLOCK ESP", width / 2, 18, 0xFFF0E8FF);
-        graphics.drawCenteredString(font, "Select which blocks get an outline through walls", width / 2, 34, 0xFFB7ADC9);
+        graphics.drawCenteredString(font, "Click to toggle targets; [ON] = scanned, [OFF] = ignored", width / 2, 34, 0xFFB7ADC9);
         super.render(graphics, mouseX, mouseY, delta);
     }
 
