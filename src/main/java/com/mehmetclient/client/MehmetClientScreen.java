@@ -39,7 +39,7 @@ public final class MehmetClientScreen extends Screen {
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL);
         graphics.fill(panelX, panelY, panelX + panelW, panelY + 3, PURPLE);
         graphics.drawString(font, Component.literal("MEHMET CLIENT"), panelX + 18, panelY + 12, TEXT);
-        graphics.drawString(font, Component.literal("Minecraft 1.21.11 | Fabric | v1.2.0"), panelX + 18, panelY + 27, MUTED);
+        graphics.drawString(font, Component.literal("Minecraft 1.21.11 | Fabric | v1.2.1"), panelX + 18, panelY + 27, MUTED);
         graphics.drawString(font, Component.literal("RIGHT SHIFT / ESC"), panelX + panelW - 125, panelY + 14, MUTED);
 
         int tabY = panelY + 49;

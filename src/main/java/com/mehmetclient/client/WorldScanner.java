@@ -310,7 +310,7 @@ public final class WorldScanner {
                 || ClientModules.isEnabled("RealHitBox");
         if (!markerRendering && !entityRendering) return;
 
-        var camera = client.gameRenderer.getMainCamera().getPosition();
+        var camera = client.gameRenderer.getMainCamera().position();
         PoseStack pose = context.matrices();
         pose.pushPose();
         pose.translate(-camera.x, -camera.y, -camera.z);

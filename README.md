@@ -1,4 +1,4 @@
-# Mehmet Client v1.2.0
+# Mehmet Client v1.2.1
 
 A client-side Fabric mod for **Minecraft Java Edition 1.21.11**. Built with Java 21 and Mojang official mappings.
 
@@ -40,8 +40,8 @@ All scans are limited to blocks/chunks the vanilla client has **already loaded**
 
 1. Create a GitHub repository and upload the contents of this project folder to its root (including `.github/workflows/build.yml`).
 2. Open **Actions**. `Build Mehmet Client JAR` starts on push, or use **Run workflow**.
-3. Open the completed workflow run and download the `MehmetClient-1.2.0-<commit>` artifact.
-4. Put `mehmetclient-1.2.0.jar` from the artifact into the `.minecraft/mods` folder alongside Fabric Loader for Minecraft 1.21.11. Install the matching Fabric API version if required by the mod.
+3. Open the completed workflow run and download the `MehmetClient-1.2.1-<commit>` artifact.
+4. Put `mehmetclient-1.2.1.jar` from the artifact into the `.minecraft/mods` folder alongside Fabric Loader for Minecraft 1.21.11. Install the matching Fabric API version if required by the mod.
 
 The workflow runs `gradle clean build` on Java 21 and uploads the remapped JAR only if the build succeeds.
 
@@ -52,3 +52,8 @@ This source package has not been executed by GitHub Actions from this environmen
 ## Mojang mappings notice
 
 This project requests the official Mojang mappings during the build. Those mappings are provided under Microsoft's terms and at the user's risk, and may not be redistributed complete and unmodified. The project does not package a copy of the mappings. See the Minecraft EULA and the mapping notice presented by the build.
+
+
+## v1.2.1 build fix
+
+Fixed the Minecraft 1.21.11 official-mappings camera API call: `Camera.getPosition()` was renamed to `Camera.position()`. The deprecated-API note from `WorldScanner` is a warning, not the reported compilation error.
